@@ -380,10 +380,14 @@ the same.
 
 <a name="def-iri" />
 
-__Internationalized Resource Identifier  (IRI)__:  A unique identifier which may be an IRL. 
-In the xAPI, all IRIs should be a full absolute IRIs including a scheme. Relative IRIs 
-should not be used. IRLs should be defined within a domain controlled by the person 
-creating the IRL.
+__Internationalized Resource Identifier  (IRI)__: A unique identifier which may be an IRL. 
+Used to identify an object such as a verb, activity or activity type. Unlike URIs, IRIs 
+can contain some characters outside of the ASCII character set in order to support international 
+languages. 
+
+IRIs always include a scheme. This is not a requirement of this standard, but part of the 
+definition of IRIs, per [RFC 3987](http://www.ietf.org/rfc/rfc3987.txt). What are sometimes 
+called 'relative IRIs' are not IRIs.
 
 <a name="def-irl" />
 
@@ -640,8 +644,9 @@ The table below lists all properties of an Identified Group.
 ###### Requirements
 
 * A system consuming Statements MUST consider each Anonymous Group distinct even if it has an identical set of members.
-* A system consuming Statements MUST NOT assume that Agents in the 'member' property comprise an exact list of Agents
-in a given anonymous or Identified Group.
+* Activity Providers SHOULD use an Identified Group when they wish to issue multiple statements, aggregate data 
+or store and retrieve documents relating to a group.
+* An Activity Provider MAY include a complete or partial list of Agents in the 'member' property of a given Anonymous or Identified Group.
 
 ###### Requirements for Anonymous Groups
 
@@ -1952,6 +1957,12 @@ The following table shows the data structure for the results of queries on the S
 * An LRS MAY include all necessary information within the more property IRL to continue the query to avoid the 
 need to store IRLs and associated query data.
 * An LRS SHOULD NOT generate extremely long IRLs within the more property.
+* An LRS MAY re-run the query at the point in time that the IRL retrieved from the more property is accessed such
+that the batch retrieved includes statements which would have been included in that batch if present in the LRS at 
+the time the original query was run and excludes statements from that batch which have since been voided. 
+* Alternatively, an LRS MAY cache a list of statements to be returned at the more property such that the batch of statements
+returned matches those statements that would have been returned when the original query was run. 
+* An LRS MAY remove voided statements from the cached list of statements if using this method. 
 * The consumer SHOULD NOT attempt to interpret any meaning from the IRL returned from the more property.
 
 <a name="voided"/>
@@ -2174,7 +2185,7 @@ For supplying metadata about all other identifiers, see the format below:
 </table>
 
 If this metadata is provided as described above, it is the canonical source of information about the 
-identifier it describes.  <a href="#verb-lists-and-repositories">As with Verbs</a>, we recommend that 
+identifier it describes.  We recommend that 
 Activity Providers look for and use established, widely adopted identifiers for all types of IRI 
 identifiers other than Activity id.
 
@@ -2182,11 +2193,13 @@ identifiers other than Activity id.
 
 * Metadata MAY be provided with an identifier.
 * If metadata is provided, both name and description SHOULD be included.
+* IRLs SHOULD be defined within a domain controlled by the person creating the IRL.
 * For any of the identifier IRIs above, if the IRI is an IRL created for use with this
 specification, the controller of that IRL SHOULD make this JSON metadata available at that 
 IRL when the IRL is requested and a Content-Type of "application/json" is requested.
 * Where an identifier already exists, the Activity Provider SHOULD use the corresponding existing identifier.
-* The Activity Provider MAY create and use their own Verbs where a suitable identifier does not already exist.
+* The Activity Provider MAY create and use their own identifiers where a suitable identifier does not already exist.
+* When defining identifiers, the Activity Provider MAY use URIs containing anchors so that a single page can contain definitions for multiple identifiers. E.g. http://example.com/xapi/verbs#defenestrated
 * Other sources of information MAY be used to fill in missing details, such as translations, or
 take the place of this metadata entirely if it was not provided or cannot be loaded. This MAY
 include metadata in other formats stored at the IRL of an identifier, particularly if that
@@ -2259,19 +2272,19 @@ of the problem.
 ### 6.3 Concurrency
 
 ##### Description
-Concurrency control makes certain that an API consumer does not PUT changes based on old
+Concurrency control makes certain that an API consumer does not PUT or POST changes based on old
 data into an LRS.
 
 ##### Details
 xAPI will use HTTP 1.1 entity tags ([ETags](http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.19))
-to implement optimistic concurrency control in the portions of the API where PUT may
+to implement optimistic concurrency control in the portions of the API where PUT or POST may
 overwrite existing data, being:
 
 * State API
 * Agent Profile API 
 * Activity Profile API
 
-The State API will permit PUT requests without concurrency headers, since state conflicts
+The State API will permit PUT and POST requests without concurrency headers, since state conflicts
 are unlikely. The requirements below only apply to Agent Profile API and Activity Profile API.
 
 
@@ -2294,11 +2307,20 @@ of the SHA-1 digest of the contents.
 modifications made after the consumer last fetched the document.
 * An LRS responding to a PUT request MUST handle the [If-None-Match](http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.26) header as described in RFC2616, HTTP 1.1 if it contains "*", in order to to detect 
 when there is a resource present that the consumer is not aware of.
+* An LRS responding to a POST request SHOULD* handle the [If-Match](http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.24) header as described in RFC2616, HTTP 1.1 if it contains an ETag, in order to detect
+modifications made after the consumer last fetched the document.
+* An LRS responding to a POST request SHOULD* handle the [If-None-Match](http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.26) header as described in RFC2616, HTTP 1.1 if it contains "*", in order to to detect 
+when there is a resource present that the consumer is not aware of.
 
-If the header precondition in either of the PUT request cases above fails, the LRS:
+If the header precondition in any of the PUT request cases above fails, the LRS:
 
 * MUST return HTTP status 412 "Precondition Failed".
 * MUST NOT make a modification to the resource. 
+
+If the header precondition in any of the POST request cases above fails, the LRS:
+
+* SHOULD* return HTTP status 412 "Precondition Failed".
+* SHOULD* NOT make a modification to the resource. 
 
 If a PUT request is received without either header for a resource that already exists, the LRS:
 
@@ -2822,20 +2844,8 @@ Returns: ```200 OK```, Statement or [Statement Result](#retstmts) (See [Section 
 			<br/><br/>
 			If "canonical", return Activity Objects populated with the canonical
 			definition of the Activity Objects as determined by the LRS, after
-			applying the language filtering process defined below, and return the original
-			Agent Objects as in "exact" mode.  
-			<br/><br/>
-			<b>Canonical Language Process:</b> Activity Objects contain Language Map Objects 
-			for name and description. Only one language should be returned in each of 
-			these maps.  
-			<br/><br/>
-			In the event of format being “canonical”, only one language should be returned in 
-			each of these maps. In order to choose the most relevant language, the LRS will 
-			apply the Accept-Language header as described in 
-			<a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html"> RFC 2616</a>
-			(HTTP 1.1), except that this logic will be applied to each language map
-			individually to select which language entry to include, rather than to the 
-			resource (list of Statements) as a whole.
+			applying the <a href="#queryLangFiltering">language filtering process defined below</a>,
+			and return the original Agent Objects as in "exact" mode.  
 		</td>
 		<td>Optional</td>
 	</tr>
@@ -2905,6 +2915,18 @@ This section does not apply when retrieving Statements with statementId or voide
 
 __Note:__StatementRefs used in the statement field in context do not affect how
 Statements are filtered.
+
+<a name="queryLangFiltering" />
+
+###### Language filtering requirements for canonical format statements
+
+* Activity Objects contain Language Map Objects for name, description and interaction components. 
+The LRS MUST return only one language in each of these maps. 
+
+* In order to choose the most relevant language, the LRS MUST apply the Accept-Language header as 
+described in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html"> RFC 2616</a> 
+(HTTP 1.1), except that this logic MUST be applied to each language map individually to select 
+which language entry to include, rather than to the resource (list of Statements) as a whole.
 
 <a name="voidedStatements" />
 
