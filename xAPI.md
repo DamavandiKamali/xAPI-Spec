@@ -482,12 +482,12 @@ The details of each property of a statement are described in the table below.
 		<a href="#group">Group</a> Object. Represents the "I" in "I Did This".</td>
 	<td>Required</td></tr>
 	<tr><td><a href="#verb">verb</a></td><td>Object</td>
-	<td>Action of the Learner or Team Object. Represents the "Did" in "I Did This".</td>
+	<td>Action taken by the Actor. Represents the "Did" in "I Did This".</td>
 	<td>Required</td></tr>
 	<tr><td><a href="#object">object</a></td><td>Object</td>
 	<td>Activity, Agent, or another Statement that is the Object of the Statement. 
-	Represents the "This" in "I Did This". Note that Objects which are provided as a value for this field should 
-	include an "objectType" field. If not specified, the Object is assumed to be 
+	Represents the "This" in "I Did This". Note that Objects which are provided as a value for this property should 
+	include an "objectType" property. If not specified, the Object is assumed to be 
 	an Activity.</td>
 	<td>Required</td></tr>
 	<tr><td><a href="#result">result</a></td><td>Object</td>
@@ -499,8 +499,7 @@ The details of each property of a statement are described in the table below.
 	<td>Optional</td></tr>
 	<tr><td><a href="#timestamp">timestamp</a></td><td>Date/Time</td>
 	<td>Timestamp (Formatted according to <a href="https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations">ISO 8601</a>) 
-	of when the events described within this Statement occurred. If not provided, LRS 
-	should set this to the value of "stored" time.</td>
+	of when the events described within this Statement occurred. Set by the LRS if not provided.</td>
 	<td>Optional</td></tr>
 	<tr><td><a href="#stored">stored</a></td><td>Date/Time</td>
 	<td>Timestamp (Formatted according to <a href="https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations">ISO 8601</a>) 
@@ -508,7 +507,7 @@ The details of each property of a statement are described in the table below.
 	<td>Set by LRS</td></tr>
 	<tr><td><a href="#authority">authority</a></td><td>Object</td>
 	<td>Agent or Group who is asserting this Statement is true. Verified by the LRS based on 
-	authentication, and set by LRS if left blank.</td>
+	authentication. Set by LRS if not provided or if a strong trust relationship between the sender and LRS has not been established.</td>
 	<td>Optional</td></tr>
 	<tr><td><a href="#version">version</a></td><td>Version</td>
 	<td>The Statement’s associated xAPI version, formatted according to <a href="http://semver.org/spec/v1.0.0.html">Semantic Versioning 1.0.0</a>.</td>
@@ -759,8 +758,8 @@ The table below lists all properties of the Verb Object.
 		<td>id</td>
 		<td>IRI</td>
 		<td>Corresponds to a Verb definition. Each Verb definition 
-			corresponds to the meaning of a Verb, not the word. The IRI should 
-			be human-readable and contain the Verb meaning.</td>
+			corresponds to the meaning of a Verb, not the word. 
+		</td>
 		<td>Required</td>
 	</tr>
 	<tr>
@@ -774,19 +773,45 @@ The table below lists all properties of the Verb Object.
 	</tr>
 </table>
 
-###### Requirements
+###### Verb Id Requirements
 
-* The display property MUST be used to illustrate the meaning which is already determined by the Verb IRI.
 * A system reading a Statement MUST use the Verb IRI to infer meaning.
-* The display property MUST NOT be used to alter the meaning of a Verb.
-* A system reading a Statement MUST NOT use the display property to infer any meaning from the Statement.
-* A system reading a Statement MUST NOT use the display property for any purpose other than display to a human.
-Using the display property for aggregation or categorization of Statements is an example of violating this requirement. 
-* The display property SHOULD be used by all Statements.
-* The IRI contained in the id SHOULD be human-readable and imply the Verb meaning.
+* The IRI contained in an id SHOULD contain a human-readable portion which SHOULD provide meaning enough 
+for a person reviewing the raw statement to disambiguate the Verb from other similar(in syntax) Verbs.
+* A single Verb IRI MUST NOT be used to refer to multiple meanings.
+
+###### Verb Display AP Requirements
+* The Display property SHOULD be used by all Statements.
+* The Display property MUST be used to illustrate the meaning which is already determined by the Verb IRI.
+
+###### Verb Display LRS Requirements
+The requirements below relate to the Display property as returned by the LRS via the API.  
+
+* When queried for Statements with a Format of "exact", the LRS MUST return the Display property 
+exactly as included (or omitted) within the Statement.
+* When queried for Statements with a Format of "ids", the LRS SHOULD* NOT include the Display property.
+* When queried for Statements with a Format of "canonical", the LRS SHOULD* return a canonical Display 
+for that Verb. 
+* The LRS may determine its canonical Display based on the Verb Display property included within 
+Statements it recieves, the Name property included in the metadata as described in 
+[section 5.4 Identifier metadata](#miscmeta), or the Verb Display as defined in some other location.
+
+###### Verb Display Client Requirements
+The requirements below relate to the display property as displayed to a user either by the LRS or
+another system. 
+
+* The Display property MUST NOT be used to alter the meaning of a Verb.
+* A system reading a Statement MUST NOT use the Display property to infer any meaning from the Statement.
+* A system reading a Statement MUST NOT use the Display property for any purpose other than Display to a human.
+Using the Display property for aggregation or categorization of Statements is an example of violating this requirement. 
+* Systems displaying a Statement's Verb in a user interface MAY choose to render the Verb Display property included within the 
+Statement, the Name property included in the metadata as described in [section 5.4 Identifier metadata](#miscmeta), or the 
+Verb Display as defined in some other location.
+* Systems displaying a Statement's Verb MUST NOT display a word that differs from the meaning of the Verb but 
+MAY alter the wording and tense displayed for the purposes of human-readability. 
 
 ###### Example
-This example shows a Verb with the recommended fields set.
+This example shows a Verb with the recommended properties set.
 ```
 {
     "id":"http://www.adlnet.gov/XAPIprofile/ran(travelled_a_distance)", 
@@ -808,9 +833,9 @@ _Semantics_
 
 The IRI represented by the Verb id identifies the particular semantics of a word, not the word itself. 
 
-For example, the English word "fired" could mean different things depending on context, such as "fired a 
-weapon", "fired a kiln", or "fired an employee". In this case, an IRI MUST identify one of these specific 
-meanings, not the word "fired". 
+For example, the English word "fired" could mean different things depending on context, such as 
+"fired(a weapon)", "fired(a kiln)", or "fired(an employee)". In this case, an IRI identifies one of 
+these specific meanings. 
 
 The display property has some flexibility in tense. While the Verb IRIs are expected to remain in the 
 past tense, if conjugating verbs to another tense (using the same Verb) within the Activity makes sense, 
@@ -868,8 +893,8 @@ Some examples:
 
 ###### Details
 
-Objects which are provided as a value for this field SHOULD include an "objectType" 
-field. If not specified, the objectType is assumed to be "Activity". Other valid values 
+Objects which are provided as a value for this property SHOULD include an "objectType" 
+property. If not specified, the objectType is assumed to be "Activity". Other valid values 
 are: <a href="#agentasobj">Agent</a>, <a href="#agentasobj">Group</a>, <a href="#substmt">SubStatement</a> or [StatementRef](#stmtref)</a>.
 The properties of an Object change according to the objectType.
 
@@ -1008,14 +1033,14 @@ its internal representation of that Activity's definition.
 
 ###### Rationale
 
-Traditional e-learning has included structures for interactions or assessments. 
-As a way to allow these practices and structures to extend Experience API's 
-utility, this specification includes built-in definitions for interactions, which 
-borrows from the SCORM 2004 4th Edition Data Model. These definitions are intended to provide a 
-simple and familiar utility for recording interaction data. These definitions 
-are simple to use, and consequently limited. It is expected that communities of 
-practice requiring richer interactions definitions will do so through the use 
-of extensions to an Activity's type and definition. 
+Traditional e-learning has included structures for interactions or assessments. As a way to allow these practices and
+structures to extend Experience API's utility, this specification includes built-in definitions for interactions, which
+borrows from the SCORM 2004 4th Edition Data Model. These definitions are intended to provide a simple and familiar utility
+for recording interaction data. Since 1.0.3, direct references to the SCORM data model have started to be removed, and any
+associated requirements included directly in this document.
+
+These interaction definitions are simple to use, and consequently limited. It is expected that communities of practice
+requiring richer interactions definitions will do so through the use of extensions to an Activity's type and definition. 
 
 ###### Details
 
@@ -1026,39 +1051,178 @@ The table below lists the properties for Interaction Activities.
 	<tr>
 		<td>interactionType</td>
 		<td>String</td>
-		<td>As in "cmi.interactions.n.type" as defined in the SCORM 2004 4th 
-			Edition Run-Time Environment.</td>
+		<td>The type of interaction. Possible values are: “true-false”, “choice”, “fill-in”, “long-fill-in”,
+		“matching”, “performance”, “sequencing”, “likert”, “numeric” or “other”. </td>
 		<td>Optional</td>
 	</tr>
 	<tr>
 		<td>correctResponsesPattern</td>
 		<td>An array of strings</td>
-		<td>Corresponds to 
-			"cmi.interactions.n.correct_responses.n.pattern" as defined in 
-			the SCORM 2004 4th Edition Run-Time Environment, where the final 
-			<em>n</em> is the index of the array.</td>
+		<td>A pattern representing the correct response to the interaction. The structure of this pattern varies
+		depending on the interactionType. This is detailed below. </td>
 		<td>Optional</td>
 	</tr>
 	<tr>
 		<td>choices | scale | source | target | steps</td>
 		<td>Array of interaction components</td>
-		<td>Specific to the given interactionType (<a href="#interactionType">see below</a>).</td>
+		<td>Specific to the given interactionType (<a href="#interactionComponentLists">see below</a>).</td>
 		<td>Optional</td>
 	</tr>
 </table>  
 
-###### A Note on Delimiters
-The SCORM 2004 4th Edition Run-Time Environment allows certain delimiters to be added to strings which convey certain information about that string. This is outlined in section 4.1.1.6: Reserved Delimiters of that document and referenced throughout the RTE data model. These delimiters can be used within the Correct Responses pattern for some types of interaction as defined in section 4.2.9.1: Correct Responses Pattern Data Model Element Specifics of the SCORM 2004 4th ed. RTE. 
+###### Interaction Types
+The table below describes the kinds of interactions represented by each of the interactionTypes. These types of interactions were originally 
+based on the types of interactions allowed for "cmi.interactions.n.type" in the SCORM 2004 4th Edition Run-Time Environment.
+See [Appendix C](#AppendixC) for examples definitions for each interaction type. 
 
-There is some discrepancy in the order of delimiters between sections 4.1.1.6 and 4.2.9.1. For the purposes of the Experience API, we take the order of delimiters listed in 4.2.9.1 to be correct. 
+<table>
+	<tr><th>intractionType</th><th>Description</th></tr>
+	<tr>
+		<td>true-false</td>
+		<td>An interaction with two possible responses: true or false.</td>
+	</tr>
+	<tr>
+		<td>choice</td>
+		<td>An interaction with a number of possible choices from which the learner can select. 
+			This includes intractions in which the learner can select only one answer from the list and
+			those where the learner may select multiple items.</td>
+	</tr>
+	<tr>
+		<td>fill-in</td>
+		<td>An interaction which requires the learner to supply a short response in the form of one or more 
+			strings of characters. Typically, the correct response consists of part of a word, one word or a few words. 
+			'Short' means that the corect responses pattern and learner response strings will normally be 250 characters or less;
+		</td>
+	</tr>
+	<tr>
+		<td>long-fill-in</td>
+		<td>An interaction which requires the learner to supply a response in the form of a long string of characters.
+			'Long' means that the corect responses pattern and learner response strings will normally be more than 250 characters.
+		</td>
+	</tr>
+	<tr>
+		<td>matching</td>
+		<td>An interaction where the learner must match items in one set (the source set) to items in another set (the target set).
+			Items do not have to pair off exactly and it's possible for multiple or zero source items to be matched to a given target and vice versa.</td>
+	</tr>
+	<tr>
+		<td>performance</td>
+		<td>An interaction that requires the learner to perform a task that requires multiple steps.</td>
+	</tr>
+	<tr>
+		<td>sequencing</td>
+		<td>An interaction where the learner must order items in a set.</td>
+	</tr>
+	<tr>
+		<td>likert</td>
+		<td>An interaction which asks the learner to select from a discrete set of choices on a scale</td>
+	</tr>
+	<tr>
+		<td>numeric</td>
+		<td>Any interaction which requires a numeric response from the learner.</td>
+	</tr>
+	<tr>
+		<td>other</td>
+		<td>Another type of interaction that does not fit into those defined above.</td>
+	</tr>
+</table>
+
+###### Response Patterns
+The table below outlines the format of the strings within correctResponsesPattern property for each interaction type. 
+This format is also used to represent the learner's response within the result object. These formats were originally based on the 
+requirements relating to "cmi.interactions.n.correct_responses.n.pattern" as defined in the SCORM 2004 4th Edition 
+Run-Time Environment. See [Appendix C](#AppendixC) for examples of each format. 
+
+<table>
+	<tr><th>intractionType</th><th>Format</th></tr>
+	<tr>
+		<td>true-false</td>
+		<td>Either <code>true</code> or <code>false</code></td>
+	</tr>
+	<tr>
+		<td>choice</td>
+		<td>A list of item ids delimited by <code>[,]</code>. If the response contains only one item, the delimiter MUST not be used.</td>
+	</tr>
+	<tr>
+		<td>fill-in and long-fill-in</td>
+		<td>A list of responses delimited by <code>[,]</code>. If the response contains only one item, the delimiter MUST not be used.</td>
+	</tr>
+	<tr>
+		<td>matching</td>
+		<td>A list of matching pairs, where each  pair consists of a source item id followed by a target item id. 
+			Items can appear in multiple (or zero) pairs.
+			Items within a pair are delimited by <code>[.]</code>. Pairs are delimited by <code>[,]</code>.
+		</td>
+	</tr>
+	<tr>
+		<td>performance</td>
+		<td>
+			A list of steps containing a step ids and the response to that step.
+			Step ids are separated from responses by <code>[.]</code>. Steps are delimited by <code>[,]</code>.
+			The response can be a string as in a fill-in interaction or a number range as in a numeric interaction. 
+		</td>
+	</tr>
+	<tr>
+		<td>sequencing</td>
+		<td>An ordered list of item ids delimited by <code>[,]</code>.</td>
+	</tr>
+	<tr>
+		<td>likert</td>
+		<td>A single item id</td>
+	</tr>
+	<tr>
+		<td>numeric</td>
+		<td>A range of numbers represented by a minimum and a maximum delimited by <code>:</code>.
+		</td>
+	</tr>
+	<tr>
+		<td>other</td>
+		<td>Any format is valid within this string as appropriate for the type of interaction.</td>
+	</tr>
+</table>
+
+###### Characterstring parameters
+Some of the values within the responses described above can be prepended with certain additional parameters. These were originally based on the characterstring
+delimiters defined in the SCORM 2004 4th Edition Run-Time Environment. These parameters are represented by the format ```{parameter=value}```. See
+See [the long-fill-in example within Appendix C](#long-fill-in). 
+
+The following parameters are valid at the start of the string representing the list of items for the listed interaction types:
+<table>
+	<tr><th>Parameter</th><th>Description</th><th>Value</th><th>Interaction types</th></tr>
+	<tr>
+		<td>case_matters</td>
+		<td>Whether or not the case of items in the list matters.</td>
+		<td><code>true</code> or <code>false</code></td>
+		<td>fill-in, long-fill-in</td>
+	</tr>
+	<tr>
+		<td>order_matters</td>
+		<td>Whether or not the order of items in the list matters.</td>
+		<td><code>true</code> or <code>false</code></td>
+		<td>fill-in, long-fill-in, performance</td>
+	</tr>
+</table>
+
+The following parameters are valid at the start of each item in the list for the listed interaction types:
+<table>
+	<tr><th>Parameter</th><th>Description</th><th>Value</th><th>Interaction types</th></tr>
+	<tr>
+		<td><code>lang</code></td>
+		<td>The language used within the item.</td>
+		<td><a href="http://tools.ietf.org/html/rfc5646">RFC 5646 Language Tag</a></td>
+		<td>fill-in, long-fill-in, performance (string responses only)</td>
+	</tr>
+</table>
 
 
 ###### Requirements
 
 * Interaction Activities MUST have a valid interactionType.
-* Interaction Activities SHOULD have the Activity type http://adlnet.gov/expapi/activities/cmi.interaction".
+* Interaction Activities SHOULD have the Activity type "http://adlnet.gov/expapi/activities/cmi.interaction".
 * An LRS, upon consuming a valid interactionType, MAY validate the remaining properties as specified in the table 
 below and MAY return HTTP 400 "Bad Request" if the remaining properties are not valid for the Interaction Activity.
+* The LRS SHOULD* NOT enforce character limits relating to response patterns. 
+* The LRS SHOULD* NOT limit the length of the correctResponsesPattern array for any interactionType. 
 
 
 ##### Interaction Components  
@@ -1084,26 +1248,32 @@ Interaction components are defined as follows:
 	</tr>
 </table>
 
-<a name="interactionType"/>
+<a name="#interactionComponentLists"/>
 
-The following table shows the supported lists of CMI interaction components for 
-an interaction Activity with the given interactionType.
+Depending on Interaction Type, Interaction Activities can take additional properties, each containing a 
+list of interaction components. These additional properties are called ‘interaction component lists’. The following table
+shows the supported interaction component list(s) for an Interaction Activity with the given interactionType.
 
 <table>
-	<tr><th>interactionType</th><th>supported component list(s)</th><tr>
-	<tr><td>choice, sequencing</td><td>choices</td></tr>
-	<tr><td>likert</td><td>scale</td></tr>
-	<tr><td>matching</td><td>source, target</td></tr>
-	<tr><td>performance</td><td>steps</td></tr>
-	<tr><td>true-false, fill-in, long-fill-in, numeric, other</td><td>[No component lists defined]</td></tr>
+	<tr><th>interactionType</th><th>supported interaction component list(s)</th><th>Description</th><tr>
+	<tr><td>choice, sequencing</td><td>choices</td>
+	<td>A list of the options available in the interaction for selection or ordering.</td></tr>
+	<tr><td>likert</td><td>scale</td>
+	<td>A list of the options on the likert scale.</td></tr>
+	<tr><td>matching</td><td>source, target</td>
+	<td>Lists of sources and targets to be matched.</td></tr>
+	<tr><td>performance</td><td>steps</td>
+	<td>A list of the elements making up the performance interaction.</td></tr>
+	<tr><td>true-false, fill-in, long-fill-in, numeric, other</td><td>[No component lists defined]</td><td></td></tr>
 </table>
+
 
 ###### Requirements
 
 * Within an array of interaction components, all id values MUST be distinct.
 * An interaction component's id value SHOULD NOT have whitespace.
 
-###### Example
+###### Examples
 
 See [Appendix C](#AppendixC) for examples of Activity Definitions for each of the cmi.interaction types.
 
@@ -1245,7 +1415,7 @@ action. The concrete example that follows logically states that
 #### 4.1.5 Result
 
 ###### Description
-An optional field that represents a measured outcome related to the Statement in which it is included.
+An optional property that represents a measured outcome related to the Statement in which it is included.
 
 ###### Details
 The following table contains the properties of the Results Object.
@@ -1292,12 +1462,18 @@ The following table contains the properties of the Results Object.
 </tr>
 </table> 
 
+###### Requirements
+
+* The Duration property MUST be expressed using the format for duration in ISO 8601:2004(E) section 4.4.3.2.
+The alternative format (in conformity with the format used for time points and described in ISO 8601:2004(E) 
+section 4.4.3.3) MUST NOT be used.
+
 <a name="Score"/>
 
 ##### 4.1.5.1 Score
 
 ###### Description
-An optional field that represents the outcome of a graded Activity achieved by an Agent.
+An optional property that represents the outcome of a graded Activity achieved by an Agent.
 
 ###### Details
 
@@ -1308,28 +1484,35 @@ The table below defines the Score Object.
 	<tr>
 		<td>scaled</td>
 		<td>Decimal number between -1 and 1, inclusive</td>
-		<td>Cf. 'cmi.score.scaled' in SCORM 2004 4th Edition</td>
+		<td>The score related to the experience as a proportion of the maximum score possible for the experience. 
+		In the case of negative score, the scaled score is calculated as a proportion of the minimum score possible.
+		For positive scores, the scaled score can be calculated as the raw score divided by the max score (where
+		those values are present). </td>
 		<td>Recommended</td>
 	</tr>
 	<tr>
 		<td>raw</td>
 		<td>Decimal number between min and max (if present, otherwise unrestricted), inclusive</td>
-		<td>Cf. 'cmi.score.raw'</td>
+		<td>The score achieved by the actor in the experience described by the statement. This is not modified by
+		any scaling or normalization.</td>
 		<td>Optional</td>
 	</tr>
 	<tr>
 		<td>min</td>
 		<td>Decimal number less than max (if present)</td>
-		<td>Cf. 'cmi.score.min'</td>
+		<td>The lowest possible score for the experience described by the statement.</td>
 		<td>Optional</td>
 	</tr>
 	<tr>
 		<td>max</td>
 		<td>Decimal number greater than min (if present)</td>
-		<td>Cf. 'cmi.score.max'</td>
+		<td>The highest possible score for the experience described by the statement.</td>
 		<td>Optional</td>
 	</tr>
 </table>
+
+The properties of the score object are based on the corresponding properties of cmi.score as defined in SCORM 2004 
+4th Edition. 
 
 ###### Requirements
 
@@ -1343,10 +1526,10 @@ from an extension profile instead.
 #### 4.1.6 Context
 
 ###### Description 
-An optional field that provides a place to add contextual information to a Statement. All properties are optional.
+An optional property that provides a place to add contextual information to a Statement. All properties are optional.
 
 ###### Rationale 
-The "context" field provides a place to add some contextual information to a Statement. It can store information such 
+The Context property provides a place to add some contextual information to a Statement. It can store information such 
 as the instructor for an experience, if this experience happened as part of a team Activity, or how an experience fits 
 into some broader activity.
 
@@ -1477,7 +1660,7 @@ For example: Anna attempts a biology exam, and the Statement is
 tracked using the CMI-5 profile. The Statement's Activity refers
 to the exam, and the category is the CMI-5 profile.
 
-5. __Other__: a context Activity that doesn't fit one of the other fields.
+5. __Other__: a context Activity that doesn't fit one of the other properties.
 For example: Anna studies a textbook for a biology exam. The Statement's
 Activity refers to the textbook, and the exam is a context Activity of type "other".
 
@@ -1549,8 +1732,7 @@ These examples are for illustrative purposes only and are not meant to be prescr
 * A timestamp MAY be truncated or rounded to a precision of at least 3 decimal digits for seconds (millisecond precision MUST be preserved). 
 * A timestamp MAY be a moment in the future, to denote a deadline for planned learning, provided it is included 
 inside a Sub-Statement.
-
-
+* SHOULD* be set by the LRS to the value of [Stored](#stored) if not provided.
 
 
 <a name="stored"/> 
@@ -1614,11 +1796,11 @@ or them as a user, but the unique combination of both.
 * The authority MUST contain an Agent Object that represents the OAuth consumer, either by itself, or 
 as part of a group in the case of 3-legged OAuth.
 * The Agent representing the OAuth consumer MUST be identified by account.
-* The Agent representing the OAuth consumer MUST use the consumer key as the “account name” field.
+* The Agent representing the OAuth consumer MUST use the consumer key as the value of the Account "name” property.
 * If the Agent representing the OAuth consumer is a registered application, the token request endpoint 
 MUST be used as the account homePage.
 * If the Agent representing the OAuth consumer is not a registered application, the temporary  
-credentials endpoint MUST be used as the account homePage.
+credentials endpoint MUST be used as the Account "homePage".
 * An LRS MUST NOT trust the application portion of the authority in the event the account name is from 
 the same source as the unregistered application. (Multiple unregistered applications could choose the same consumer key. 
 As a result, there is no consistent way to verify this combination of temporary credentials and 
@@ -1679,10 +1861,10 @@ A digital artifact providing evidence of a learning experience.
 In some cases an attachment may logically be an important part of a learning record. Think of a simulated 
 communication with ATC, an essay, a video, etc. Another example of such an attachment is (the image of) a 
 certificate that was granted as a result of an experience. It is useful to have a way to store these attachments 
-in and retrieve them from an LRS. In the case of wanting to include an attachment(s) for a Sub-Statement, we strongly recommend including the attachment(s) in the Statement attachment field and including the payloads as you would normally for a Statement.
+in and retrieve them from an LRS. In the case of wanting to include an attachment(s) for a Sub-Statement, we strongly recommend including the attachment(s) in the Statement Attachment object and including the payloads as you would normally for a Statement.
 
 ###### Details
-The table below lists all properties of the Attachment Object.
+The table below lists all properties of the Attachment object.
 <table>
 	<tr><th>Property</th><th>Type</th><th>Description</th><th>Required</th></tr>
 	<tr>
@@ -1759,12 +1941,12 @@ results when the attachments filter is false.
     * The first part of the multipart document MUST contain the Statements themselves, with type "application/json".
     * Each additional part contains the raw data for an attachment and forms a logical part of the Statement. This 
 capability will be available when issuing PUT or POST against the Statement resource.
-	* MUST include an X-Experience-API-Hash field in each part's header after the first (Statements) part.
-	* This field MUST be set to match the "sha2" property of the attachment declaration corresponding to the 
+	* MUST include an X-Experience-API-Hash parameter in each part's header after the first (Statements) part.
+	* This parameter MUST be set to match the "sha2" property of the attachment declaration corresponding to the 
 	attachment included in this part.
-	* MUST include a Content-Transfer-Encoding field with a value of "binary" in each part's header after the first (statements) part.
+	* MUST include a Content-Transfer-Encoding parameter with a value of "binary" in each part's header after the first (statements) part.
     * SHOULD only include one copy of an attachment's data when the same attachment is used in multiple Statements that are sent together.
-    * SHOULD include a Content-type field in each part's header, for the first part this MUST be "application/json".
+    * SHOULD include a Content-Type parameter in each part's header, for the first part this MUST be "application/json".
 
 
 ###### LRS Requirements
@@ -1981,9 +2163,9 @@ itself be voided.
 ###### Requirements
 
 * When issuing a Statement that voids another, the Object of that voiding Statement MUST have the "objectType" 
-field set to "StatementRef".
+property set to "StatementRef".
 * When issuing a Statement that voids another, the Object of that voiding Statement MUST specify the id 
-of the statement-to-be-voided by its "id" field.
+of the statement-to-be-voided by its "id" property.
 * an LRS MUST consider a Statement it contains "voided" if and only if the Statement is not itself a voiding Statement and the LRS also contains a voiding Statement referring to the first Statement.
 * Upon receiving a Statement that voids another, the LRS SHOULD reject the entire request which includes the 
 voiding Statement with HTTP 403 'Forbidden' if the request is not from a source authorized to void Statements.
@@ -2115,6 +2297,11 @@ string in the language specified in the tag. This map should be populated as
 fully as possible based on the knowledge of the string in question in different 
 languages.  
 
+The content of strings within a langauge map is plain text. It's expected that any formatting code 
+such as HTML tags or markdown will not be rendered, but will be displayed as code when this string is 
+displayed to an end user. An important exception to this is if language map object is used in an extension and 
+the owner of that extension IRI explicitly states that a particular form of code will be rendered. 
+
 <a name="miscext"/> 
 
 ### 5.3 Extensions
@@ -2172,7 +2359,7 @@ For supplying metadata about all other identifiers, see the format below:
 	<tr>
 		<td>name</td>
 		<td><a href="#misclangmap">Language Map</a></td>
-		<td>The human readable/visual name</td>
+		<td>The human readable/visual name. For Verbs, this is equivalent to the Display property in a statement.</td>
 		<td>Optional</td>
 	</tr>
 	<tr>
@@ -2203,7 +2390,6 @@ IRL when the IRL is requested and a Content-Type of "application/json" is reques
 take the place of this metadata entirely if it was not provided or cannot be loaded. This MAY
 include metadata in other formats stored at the IRL of an identifier, particularly if that
 identifier was not coined for use with this specification.
-
 
 <a name="rtcom"/>
 
@@ -2420,7 +2606,7 @@ record the authority as the Agent representing the registered application.
 
 ###### Application not registered + known user Process and Requirements
 
-* Use a blank consumer secret.
+* The AP MUST use a consumer secret consisting of an empty string.
 * Call "Temporary Credential" request.
 * Specify "consumer_name" and other usual parameters; User will then see "consumer_name" plus a warning 
 that the identity of the application requesting authorization cannot be verified.
@@ -2436,8 +2622,13 @@ since OAuth specifies an application.
 
 ###### No authorization Process and Requirements
 
-* Requests should include headers for HTTP Basic Authentication based on a blank username and password, in order to 
-distinguish an explicitly unauthenticated request from a  request that should be given a HTTP Basic Authentication 
+* Requests MUST include headers for HTTP Basic Authentication based on a username and password containing zero or
+more space characters. 
+* Requests SHOULD* include headers for HTTP Basic Authentication based on a username and password each consisting of 
+an empty string. In this case the HTTP Basic Authentication header will be ```Basic ``` followed by a base64 encoded version of the string ```:```.
+This results in the string ```Basic Og==```.
+
+This is in order to distinguish an explicitly unauthenticated request from a request that should be given a HTTP Basic Authentication 
 challenge.
 
 <a name="oauthscope"/> 
@@ -2689,7 +2880,7 @@ do not match.
 
 * The LRS MAY respond before Statements that have been stored are available for retrieval.
 
-* GET Statements MAY be called using POST and form fields if necessary as query strings 
+* GET Statements MAY be called using POST and form parameters if necessary as query strings 
 have limits. See Section [7.8 Cross Origin Requests](#78-cross-origin-requests) for more details.
 
 * The LRS MUST differentiate a POST to add a Statement or to list Statements based on the 
@@ -2916,7 +3107,7 @@ being fetched.
 
 This section does not apply when retrieving Statements with statementId or voidedStatementId.
 
-__Note:__StatementRefs used in the statement field in context do not affect how
+__Note:__StatementRefs used as a value of the Statement property within Context do not affect how
 Statements are filtered.
 
 <a name="queryLangFiltering" />
@@ -4125,6 +4316,8 @@ This example shows a Sub-Statement object whose object is a Statement Reference.
 }
 ```
 
+In this example the minimum correct answer is 4 and there is no maximum. 5, 6 or 976 would all be correct answers. 
+
 ###### other  
 ```
 "definition": {
@@ -4177,8 +4370,8 @@ A 1.0.0 system converting a Statement created in 0.9 MUST follow the steps below
 * If an authority was not previously set, set the authority to an Agent identified by
 an account with a homePage set to the home page corresponding to the
 system performing the conversion and an accountName of "unknown".
-* if the Statement field in context was set, remove it from the Statement.
-* Preserve all other fields without modification, including "stored". Stored should still
+* if the Statement property in Context was set, remove it from the Statement.
+* Preserve all other properties without modification, including "stored". Stored should still
 be updated if the Statement is passed to another system.
 
 ######Conversion of Statements created based on version 0.95
@@ -4192,9 +4385,9 @@ A 1.0.0 system converting a Statement created in 0.95 MUST follow the steps belo
 * If an authority was not previously set, set the authority to an Agent identified by
 an account with a homePage set to the home page corresponding to the
 system performing the conversion and an accountName of "unknown".
-* If the Statement field in context was set to anything other than a
+* If the Statement property in Context was set to anything other than a
 StatementRef, remove it from the Statement.
-* Preserve all other fields without modification, including "stored". Stored should still
+* Preserve all other properties without modification, including "stored". Stored should still
 be updated if the Statement is passed to another system.
 
 
